@@ -1,27 +1,167 @@
+#include <CuteBuzzerSounds.h> // see: https://github.com/GypsyRobot/CuteBuzzerSounds
+#include <Sounds.h>
+// S_CONNECTION   S_DISCONNECTION S_BUTTON_PUSHED   
+// S_MODE1        S_MODE2         S_MODE3     
+// S_SURPRISE     S_OHOOH         S_OHOOH2    
+// S_CUDDLY       S_SLEEPING      S_HAPPY     
+// S_SUPER_HAPPY  S_HAPPY_SHORT   S_SAD       
+// S_CONFUSED     S_FART1         S_FART2     
+// S_FART3        S_JUMP 20
+
+
 #include <Servo.h>
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
   #include <avr/power.h>
 #endif
+int soundSensorPin = 9;
+
+int lidState = 9; // 0 closed, 1 half, 2 open, 9 unset
 
 Servo servo;
+int pos = 0;
+int waiter = 0;
+int soundInstanceCounter = 0;
+const int servoBottom = 30;
+const int servoHalf = 80;
+const int servoTop = 105; 
+
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(24, 6, NEO_GRB + NEO_KHZ800);
 
-const int trigPin = 11;
-const int echoPin = 12;
+const int trigPin = 15;
+const int echoPin = 16;
 
-long duration;
+long durationCheck;
 int distance;
 int lastDistance = 60;
 bool lightsOn = false;
+#define BUZZER_PIN 14
+
 void setup() {
-  pinMode(trigPin, OUTPUT); // Sets the trigPin as an Output
-  pinMode(echoPin, INPUT); // Sets the echoPin as an Input
-  servo.attach(10);
+  cute.init(BUZZER_PIN);
+
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(soundSensorPin, INPUT);
+
+  servo.attach(17);
   pixels.begin();
-  Serial.begin(9600); // Starts the serial communication
+  Serial.begin(9600);
 }
 void loop() {
+  if (lidState == 0) {
+
+    if (digitalRead(soundSensorPin)) {
+      soundInstanceCounter += 1;
+      delay(500);
+       cute.play(S_CUDDLY);
+
+      if (soundInstanceCounter >= 5) {
+        soundInstanceCounter = 0;
+
+        Serial.print("wake up");
+        // go to state 1
+        for (pos = servoBottom; pos <= servoHalf; pos += 1) {
+          servo.write(pos);
+          delay(15);
+        }
+        lidState = 1;
+        delay(2000);
+      }   
+    }
+  }
+
+  if (lidState == 1) {
+      cute.play(S_HAPPY);
+
+    // go to state 2
+    for (pos = servoHalf; pos <= servoTop; pos += 1) {
+      servo.write(pos);             
+      delay(15);                      
+    }
+    lidState = 2;
+    delay(2000);
+  }
+
+  if (lidState == 2) {
+     // Clears the trigPin
+    digitalWrite(trigPin, LOW);
+    delayMicroseconds(2);
+    // Sets the trigPin on HIGH state for 10 micro seconds
+    digitalWrite(trigPin, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(trigPin, LOW);
+    
+    durationCheck = pulseIn(echoPin, HIGH);
+    distance = durationCheck*0.034/2;
+
+    if (distance < 5) {
+      servo.write(servoBottom);
+      lidState = 0;
+      delay(4000);
+    }
+
+    for (waiter = 0; waiter <= 10; waiter += 1) {
+      if (digitalRead(soundSensorPin)) {
+        Serial.print("too loud!");
+        servo.write(servoBottom);
+        lidState = 0;
+        delay(4000);
+        break;
+      }
+      delay(10);
+    }
+    
+
+
+  }
+
+  if (lidState == 9) {
+    servo.write(servoBottom);
+    lidState = 0;
+    cute.play(S_MODE2);
+    delay(200);
+    cute.play(S_MODE1);
+    delay(600);
+    cute.play(S_MODE3);
+
+
+
+           // S_CONNECTION   S_DISCONNECTION S_BUTTON_PUSHED   
+// S_MODE1        S_MODE2         S_MODE3     
+// S_SURPRISE     S_OHOOH         S_OHOOH2    
+// S_CUDDLY       S_SLEEPING      S_HAPPY     
+// S_SUPER_HAPPY  S_HAPPY_SHORT   S_SAD       
+// S_CONFUSED     S_FART1         S_FART2     
+// S_FART3        S_JUMP 20
+
+
+
+    delay(4000);
+  }
+
+
+
+
+// extra stuff
+  if (lidState == 99) {
+
+
+    for (waiter = 0; waiter <= 10; waiter += 1) {
+      Serial.println("about to listen");
+      if (digitalRead(soundSensorPin)) {
+        Serial.print("too loud!");
+        servo.write(servoBottom);
+        lidState = 0;
+        delay(4000);
+        break;
+      }
+      delay(10);
+    }
+
+
+
+    
   // Clears the trigPin
   digitalWrite(trigPin, LOW);
   delayMicroseconds(2);
@@ -30,9 +170,9 @@ void loop() {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
   
-  duration = pulseIn(echoPin, HIGH);
+  durationCheck = pulseIn(echoPin, HIGH);
   
-  distance= duration*0.034/2;
+  distance= durationCheck*0.034/2;
 
   if (distance < 50 ) {
     if (abs(distance - lastDistance) > 5) {
@@ -60,4 +200,6 @@ void loop() {
   
   delay(300);
   noTone(14);
+  }
+  
 }
