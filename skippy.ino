@@ -21,6 +21,7 @@ int pos = 0;
 int waiter = 0;
 int soundInstanceCounter = 0;
 
+const int ledPin =  3;
 const int trigPin = 15;
 const int echoPin = 16;
 
@@ -28,10 +29,11 @@ long durationCheck;
 int distance;
 int lastDistance = 60;
 bool lightsOn = false;
-#define BUZZER_PIN 14
+#define BUZZER_PIN 9
 
 void setup() {
   cute.init(BUZZER_PIN);
+  pinMode(ledPin, OUTPUT);
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
   pinMode(soundSensorPin, INPUT);
@@ -44,6 +46,7 @@ void setup() {
 }
 
 void loop() {      
+  digitalWrite(ledPin, HIGH);
   if (lidState == 0) {
     if (digitalRead(soundSensorPin)) {
       Serial.println("sound sensor triggered one time - when count is 5 then action happens");
