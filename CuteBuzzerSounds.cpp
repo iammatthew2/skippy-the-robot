@@ -61,18 +61,21 @@ void CuteBuzzerSoundsClass::bendTones (float initFrequency, float finalFrequency
 }
 
 
-const int joyfulSounds[]={S_DISCONNECTION,S_BUTTON_PUSHED,S_MODE1,S_MODE2,S_MODE3,S_HAPPY_SHORT,S_SUPER_HAPPY};
+int joyfulSounds[]={S_DISCONNECTION,S_BUTTON_PUSHED,S_MODE1,S_MODE2,S_MODE3,S_HAPPY_SHORT,S_SUPER_HAPPY};
 const int unhappySounds[]={S_DISGRUNTLED,S_SAD,S_CONFUSED_SHORT};
 const int shortUnhappySounds[]={S_DISGRUNTLED,S_CONFUSED_SHORT};
 
 int getRandomSound(int soundSetName[]) {
   return soundSetName[random(sizeof(soundSetName)/2)];
 }
+int temp;
 
 void CuteBuzzerSoundsClass::playRandom(int soundSetName) {
     switch(soundSetName) {
       case SG_JOYFUL:
-        cute.play(joyfulSounds[random(sizeof(joyfulSounds)/2)]);
+        Serial.println(getRandomSound(joyfulSounds));
+        temp = getRandomSound(joyfulSounds);
+        cute.play(temp);
         break;
       case SG_UNHAPPY:
         cute.play(shortUnhappySounds[random(sizeof(shortUnhappySounds)/2)]);
