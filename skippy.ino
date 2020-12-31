@@ -2,14 +2,14 @@
 #include "CuteBuzzerSounds.h"
 
 // servo driver setup
-#include <Wire.h>
 #include <Adafruit_PWMServoDriver.h>
+#include <Wire.h>
 Adafruit_PWMServoDriver pwmServo = Adafruit_PWMServoDriver();
-#define SERVO_MIN  150
-#define SERVO_MAX  350
+#define SERVO_MIN 150
+#define SERVO_MAX 350
 #define SERVO_MIDDLE 270
 #define SERVO_FREQ 50
-int lidState = SERVO_MIN; // SERVO_MIN, SERVO_MIDDLE, SERVO_MAX
+int lidState = SERVO_MIN;  // SERVO_MIN, SERVO_MIDDLE, SERVO_MAX
 
 // reserve pins
 #define NEO_PIXEL_PIN 21
@@ -26,7 +26,7 @@ int lidState = SERVO_MIN; // SERVO_MIN, SERVO_MIDDLE, SERVO_MAX
 // nep pixel setup
 #include <Adafruit_NeoPixel.h>
 #ifdef __AVR__
-  #include <avr/power.h>
+#include <avr/power.h>
 #endif
 #define NUM_PIXELS 4
 Adafruit_NeoPixel pixels = Adafruit_NeoPixel(NUM_PIXELS, NEO_PIXEL_PIN, NEO_GRB + NEO_KHZ800);
@@ -52,15 +52,13 @@ void setup() {
 
   // neo pixels
   pixels.begin();
-  colorWipe(pixels.Color(0,0,0), 0);
+  colorWipe(pixels.Color(0, 0, 0), 0);
   cute.play(S_CONNECTION);
-  pwmServo.setPWM(8, 0, 100 );
+  pwmServo.setPWM(8, 0, 100);
   delay(1000);
   pwmServo.setPWM(8, 0, 450);
   delay(1000);
-    pwmServo.setPWM(8, 0, 500);
-
-
+  pwmServo.setPWM(8, 0, 500);
 }
 
 void loop() {
@@ -86,7 +84,7 @@ void handleLidDownState() {
     cute.playRandom(SG_JOYFUL);
     digitalWrite(BUTTON_LED_PIN, HIGH);
     delay(250);
-  
+
     if (soundInstanceCounter >= NUM_SOUNDS_UNTIL_OPEN) {
       delay(500);
       soundInstanceCounter = 0;
@@ -94,11 +92,11 @@ void handleLidDownState() {
       // open the box mid-way, slowly
       servoGoTo(SERVO_MIDDLE, 15);
       cute.play(S_HAPPY);
-      for(int i=0;i < NUM_PIXELS ;i++){
-        pixels.setPixelColor(i, pixels.Color(0,0,10));
+      for (int i = 0; i < NUM_PIXELS; i++) {
+        pixels.setPixelColor(i, pixels.Color(0, 0, 10));
         pixels.show();
       }
-    }   
+    }
   }
 }
 
@@ -111,11 +109,11 @@ void handleLidMiddleState() {
 
 void handleLidUpState() {
   if (getDistance() < 10) {
-    for(int i=0;i < NUM_PIXELS ;i++){
-      pixels.setPixelColor(i, pixels.Color(10,0,0));
+    for (int i = 0; i < NUM_PIXELS; i++) {
+      pixels.setPixelColor(i, pixels.Color(10, 0, 0));
       pixels.show();
     }
-        
+
     Serial.println("too close - distance sensor deleted less than 10 cm");
 
     digitalWrite(BUTTON_LED_PIN, HIGH);
@@ -126,18 +124,18 @@ void handleLidUpState() {
     servoGoTo(SERVO_MIN);
 
     delay(1000);
-    colorWipe(pixels.Color(0,0,0), 0);  
+    colorWipe(pixels.Color(0, 0, 0), 0);
   }
 
   for (waiter = 0; waiter <= 1; waiter += 1) {
     if (digitalRead(SOUND_SENSOR_PIN) == LOW && lidState == SERVO_MAX) {
-        Serial.println("too loud - sound sensor triggered");
-        digitalWrite(BUTTON_LED_PIN, HIGH);
-        colorWipe(pixels.Color(random(20),random(20),random(20)), random(50));
-        delay(random(250));
-        cute.playRandom(SG_JOYFUL);
-        colorWipe(pixels.Color(10,10,0), 0);
-        digitalWrite(BUTTON_LED_PIN, LOW);
+      Serial.println("too loud - sound sensor triggered");
+      digitalWrite(BUTTON_LED_PIN, HIGH);
+      colorWipe(pixels.Color(random(20), random(20), random(20)), random(50));
+      delay(random(250));
+      cute.playRandom(SG_JOYFUL);
+      colorWipe(pixels.Color(10, 10, 0), 0);
+      digitalWrite(BUTTON_LED_PIN, LOW);
     }
     delay(10);
   }
@@ -152,7 +150,7 @@ float getDistance() {
   delayMicroseconds(10);
   digitalWrite(DISTANCE_TRIG_PIN, LOW);
 
-  // calc distance based on assumed value of speed of sound 
+  // calc distance based on assumed value of speed of sound
   return pulseIn(DISTANCE_ECHO_PIN, HIGH) * 0.034 / 2;
 }
 
@@ -171,7 +169,7 @@ void servoGoFromTo(int source, int destination, int rate) {
     for (uint16_t pulselen = source; pulselen < destination; pulselen++) {
       pwmServo.setPWM(4, 0, pulselen);
       delay(rate);
-    } 
+    }
   } else {
     // decrement down to a lower servo position
     for (uint16_t pulselen = source; pulselen > destination; pulselen--) {
@@ -183,7 +181,7 @@ void servoGoFromTo(int source, int destination, int rate) {
 }
 
 void colorWipe(uint32_t c, uint8_t wait) {
-  for(uint16_t i=0; i < pixels.numPixels(); i++) {
+  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
     pixels.setPixelColor(i, c);
     pixels.show();
     delay(wait);
