@@ -1,3 +1,5 @@
+// shamelessly copied from https://github.com/GypsyRobot/CuteBuzzerSounds
+// aiming to release as a proper fork
 #include "Arduino.h"
 #include "CuteBuzzerSounds.h"
 
