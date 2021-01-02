@@ -125,21 +125,7 @@ void handleLidMiddleState() {
 }
 
 void handleLidUpState() {
-  if (motionTrackingState != TRACKING_NOT_TRACKING) {
-    handleMotionTracking();
-  }
-
-  if (motionTrackingState == TRACKING_NOT_TRACKING && getDistance() < 50 && getDistance() > 10) {
-    colorWipe(pixels.Color(75, 0, 0), 0);
-    cute.play(S_OHOOH2);
-    motionTrackingState = TRACKING_ACQUIRED;
-    return;
-  }
-
-  if (getDistance() < 10) {
-    closeLid();
-    return;
-  }
+  handleMotionTracking();
 
   if (digitalRead(SOUND_SENSOR_PIN) == LOW) {
     digitalWrite(BUTTON_LED_PIN, HIGH);
@@ -148,19 +134,28 @@ void handleLidUpState() {
     cute.playRandom(SG_JOYFUL);
     digitalWrite(BUTTON_LED_PIN, LOW);
   }
+
+  if (getDistance() < 10) {
+    closeLid();
+  }
 }
 
 void handleMotionTracking() {
   int targetRotationState;
   int distanceCheck = getDistance();
+  if (motionTrackingState == TRACKING_NOT_TRACKING && distanceCheck < 50 && distanceCheck > 10) {
+    colorWipe(pixels.Color(75, 0, 0), 0);
+    cute.play(S_OHOOH2);
+    motionTrackingState = TRACKING_ACQUIRED;
+    return;
+  }
 
-  Serial.print("distance is: ");
-  Serial.println(distanceCheck);
   if (distanceCheck < 10) {
     motionTrackingState = TRACKING_NOT_TRACKING;
     closeLid();
     return;
   }
+
   if (motionTrackingState == TRACKING_LOST) {
     // we're seeking left: keep making the numbers smaller
     if (motionTrackingSeekDirection == SEEK_LEFT) {
