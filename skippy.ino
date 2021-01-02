@@ -7,7 +7,7 @@
 Adafruit_PWMServoDriver pwmServo = Adafruit_PWMServoDriver();
 #define SERVO_MIN 150
 #define SERVO_MAX 350
-#define SERVO_MIDDLE 270
+#define SERVO_MIDDLE 310
 #define SERVO_FREQ 50
 #define SERVO_ID_LID_LIFT 4
 #define SERVO_ID_ROTATE 8
@@ -45,11 +45,11 @@ int soundInstanceCounter = 0;
 #define TRACKING_NOT_TRACKING 0
 #define TRACKING_ACQUIRED 1
 #define TRACKING_LOST 2
-int motionTrackingState = 0;  // 0, 1, 2: not tracking, acquired, lost
-
 #define SEEK_LEFT 0
 #define SEEK_RIGHT 1
+int motionTrackingState = 0;          // 0, 1, 2: not tracking, acquired, lost
 int motionTrackingSeekDirection = 0;  // 0, 1: left, right
+int distanceOfCaptive;
 void setup() {
   Serial.begin(9600);
   cute.init(BUZZER_PIN);
@@ -107,15 +107,17 @@ void handleLidDownState() {
       // open the box mid-way, slowly
       servoGoTo(SERVO_ID_LID_LIFT, SERVO_MIDDLE, 15);
       cute.play(S_HAPPY);
-      for (int i = 0; i < NUM_PIXELS; i++) {
-        pixels.setPixelColor(i, pixels.Color(0, 0, 10));
-        pixels.show();
-      }
+      colorWipe(pixels.Color(0, 0, 10), 0);
     }
   }
 }
 
 void handleLidMiddleState() {
+  if (getDistance() < 10) {
+    closeLid();
+    return;
+  }
+
   if (digitalRead(SOUND_SENSOR_PIN) == LOW) {
     cute.playRandom(SG_JOYFUL);
     servoGoTo(SERVO_ID_LID_LIFT, SERVO_MAX, 7);
@@ -125,14 +127,10 @@ void handleLidMiddleState() {
 void handleLidUpState() {
   if (motionTrackingState != TRACKING_NOT_TRACKING) {
     handleMotionTracking();
-    return;
   }
 
-  if (getDistance() < 50 && getDistance() > 10) {
-    for (int i = 0; i < NUM_PIXELS; i++) {
-      pixels.setPixelColor(i, pixels.Color(75, 0, 0));
-      pixels.show();
-    }
+  if (motionTrackingState == TRACKING_NOT_TRACKING && getDistance() < 50 && getDistance() > 10) {
+    colorWipe(pixels.Color(75, 0, 0), 0);
     cute.play(S_OHOOH2);
     motionTrackingState = TRACKING_ACQUIRED;
     return;
@@ -140,44 +138,29 @@ void handleLidUpState() {
 
   if (getDistance() < 10) {
     closeLid();
+    return;
   }
 
-  for (waiter = 0; waiter <= 1; waiter += 1) {
-    if (digitalRead(SOUND_SENSOR_PIN) == LOW && lidState == SERVO_MAX) {
-      Serial.println("too loud - sound sensor triggered");
-      digitalWrite(BUTTON_LED_PIN, HIGH);
-      colorWipe(pixels.Color(random(20), random(20), random(20)), random(50));
-      delay(random(250));
-      cute.playRandom(SG_JOYFUL);
-      colorWipe(pixels.Color(10, 10, 0), 0);
-      digitalWrite(BUTTON_LED_PIN, LOW);
-    }
-    delay(10);
+  if (digitalRead(SOUND_SENSOR_PIN) == LOW) {
+    digitalWrite(BUTTON_LED_PIN, HIGH);
+    colorWipe(pixels.Color(random(20), random(20), random(20)), random(50));
+    delay(random(250));
+    cute.playRandom(SG_JOYFUL);
+    digitalWrite(BUTTON_LED_PIN, LOW);
   }
-}
-
-void closeLid() {
-  for (int i = 0; i < NUM_PIXELS; i++) {
-    pixels.setPixelColor(i, pixels.Color(10, 0, 0));
-    pixels.show();
-  }
-
-  Serial.println("too close - distance sensor deleted less than 10 cm");
-
-  digitalWrite(BUTTON_LED_PIN, HIGH);
-  cute.play(S_DISGRUNTLED);
-  delay(250);
-
-  // close the box
-  servoGoTo(SERVO_ID_LID_LIFT, SERVO_MIN);
-
-  delay(1000);
-  colorWipe(pixels.Color(0, 0, 0), 0);
 }
 
 void handleMotionTracking() {
   int targetRotationState;
+  int distanceCheck = getDistance();
 
+  Serial.print("distance is: ");
+  Serial.println(distanceCheck);
+  if (distanceCheck < 10) {
+    motionTrackingState = TRACKING_NOT_TRACKING;
+    closeLid();
+    return;
+  }
   if (motionTrackingState == TRACKING_LOST) {
     // we're seeking left: keep making the numbers smaller
     if (motionTrackingSeekDirection == SEEK_LEFT) {
@@ -195,27 +178,19 @@ void handleMotionTracking() {
         motionTrackingSeekDirection = SEEK_LEFT;
       }
     }
-    int distanceCheck = getDistance();
-    if (distanceCheck < 10) {
-      motionTrackingState = TRACKING_NOT_TRACKING;
-      closeLid();
-      return;
-    }
     if (distanceCheck < 50) {
-      for (int i = 0; i < NUM_PIXELS; i++) {
-        pixels.setPixelColor(i, pixels.Color(75, 0, 0));
-        pixels.show();
-      }
+      colorWipe(pixels.Color(75, 0, 0), 0);
       motionTrackingState = TRACKING_ACQUIRED;
     }
     return;
   }
-  if (motionTrackingState == TRACKING_ACQUIRED && getDistance() > 50) {
-    for (int i = 0; i < NUM_PIXELS; i++) {
-      pixels.setPixelColor(i, pixels.Color(0, 75, 0));
-      pixels.show();
+  if (motionTrackingState == TRACKING_ACQUIRED && distanceCheck > 50) {
+    // take our time confirming that we've lost the target
+    delay(650);
+    if (getDistance() > 50) {
+      colorWipe(pixels.Color(0, 75, 0), 0);
+      motionTrackingState = TRACKING_LOST;
     }
-    motionTrackingState = TRACKING_LOST;
   }
 }
 
@@ -269,14 +244,6 @@ void _servoGoFromTo(int servoName, int source, int destination, int rate) {
   }
 }
 
-void colorWipe(uint32_t c, uint8_t wait) {
-  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
-    pixels.setPixelColor(i, c);
-    pixels.show();
-    delay(wait);
-  }
-}
-
 float getDistance() {
   // Clears the DISTANCE_TRIG_PIN
   digitalWrite(DISTANCE_TRIG_PIN, LOW);
@@ -288,4 +255,31 @@ float getDistance() {
 
   // calc distance based on assumed value of speed of sound
   return pulseIn(DISTANCE_ECHO_PIN, HIGH) * 0.034 / 2;
+}
+
+void closeLid() {
+  colorWipe(pixels.Color(10, 0, 0), 0);
+
+  digitalWrite(BUTTON_LED_PIN, HIGH);
+  cute.play(S_DISGRUNTLED);
+  delay(250);
+
+  // close the box
+  servoGoTo(SERVO_ID_LID_LIFT, SERVO_MIN);
+
+  delay(1000);
+  colorWipe(pixels.Color(0, 0, 0), 0);
+}
+
+/**
+ * Sets all the NeoPixels to the same color with a delay between each
+ * @param color - 32 RGB color
+ * @param wait - time in ms to delay each light lighting up
+ */
+void colorWipe(uint32_t c, uint8_t wait) {
+  for (uint16_t i = 0; i < pixels.numPixels(); i++) {
+    pixels.setPixelColor(i, c);
+    pixels.show();
+    delay(wait);
+  }
 }
