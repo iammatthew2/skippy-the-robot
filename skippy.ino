@@ -261,6 +261,8 @@ void closeLid() {
 
   // close the box
   servoGoTo(SERVO_ID_LID_LIFT, SERVO_MIN);
+  // move the box back to the middle
+  servoGoTo(SERVO_ID_ROTATE, ROTATION_MIDDLE);
 
   delay(1000);
   colorWipe(pixels.Color(0, 0, 0), 0);
